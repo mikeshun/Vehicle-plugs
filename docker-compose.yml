@@ -1,4 +1,22 @@
+version: '3.8'
+
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vehicle_api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: mike
+      DB_PASSWORD: password
+      DB_NAME: db
+    restart: always
+
   db:
     image: mysql:8.0
     container_name: mysql_db
@@ -8,9 +26,9 @@ services:
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: db
     ports:
-      - "3306:3306" # Map host port 3306 to container port 3306
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql # Persist MySQL data
+      - mysql_data:/var/lib/mysql
     restart: always
 
 volumes:

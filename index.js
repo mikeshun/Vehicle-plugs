@@ -5,10 +5,11 @@ const PORT = 3000;
 
 // Setup MySQL connection
 const db = mysql.createConnection({
-  host: 'db',
+  host: 'host.docker.internal',
   user: 'mike',
   password: 'password',
   database: 'db',
+  port: 3307
 });
 
 // Connect to DB
