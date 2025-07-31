@@ -1,19 +1,12 @@
 const express = require('express');
+// const cors = require('cors'); // ❌ Commented out to disable CORS
 const mysql = require('mysql2');
-const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
-// Setup MySQL connection
-// const db = mysql.createConnection({
-//   host: 'host.docker.internal',
-//   user: 'mike',
-//   password: 'password',
-//   database: 'db',
-//   port: 3307
-// });
+// app.use(cors()); // ❌ Disabling CORS by commenting this line
 
+// MySQL connection
 const db = mysql.createConnection({
   host: '52.16.69.88',
   user: 'mike',
@@ -21,10 +14,8 @@ const db = mysql.createConnection({
   database: 'db',
   port: 3306
 });
- 
 
 // Connect to DB
-
 db.connect((err) => {
   if (err) throw err;
   console.log('✅ Connected to MySQL');
@@ -32,11 +23,14 @@ db.connect((err) => {
 
 // 1. Get all unique makes
 app.get('/makes', (req, res) => {
-  db.query('SELECT DISTINCT make FROM vehicledescriptions WHERE make IS NOT NULL AND make != ""', (err, results) => {
-    if (err) return res.status(500).json({ error: err });
-    const makes = results.map((row) => row.make);
-    res.json({ status: true, message: 'Fetched makes', data: makes });
-  });
+  db.query(
+    'SELECT DISTINCT make FROM vehicledescriptions WHERE make IS NOT NULL AND make != ""',
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err });
+      const makes = results.map((row) => row.make);
+      res.json({ status: true, message: 'Fetched makes', data: makes });
+    }
+  );
 });
 
 // 2. Get models by make
@@ -69,128 +63,123 @@ app.get('/engines/:make/:model', (req, res) => {
 
 // 4. Get all years for a vehicle make + model
 app.get('/years/:make/:model', (req, res) => {
-    const { make, model } = req.params;
-  
-    const query = `
-      SELECT MIN(yearbegin) AS minYear, MAX(yearend) AS maxYear
-      FROM vehicledescriptions
-      WHERE make = ? AND model = ? AND yearbegin IS NOT NULL AND yearend IS NOT NULL
-    `;
-  
-    db.query(query, [make, model], (err, results) => {
-      if (err) return res.status(500).json({ error: err });
-  
-      const row = results[0];
-      const minYear = row.minYear;
-      const maxYear = row.maxYear;
-  
-      if (minYear == null || maxYear == null) {
-        return res.status(404).json({
-          status: false,
-          message: `No years found for ${make} ${model}`,
-        });
-      }
-  
-      const years = [];
-      for (let year = minYear; year <= maxYear; year++) {
-        years.push(year);
-      }
-  
-      res.json({
-        status: true,
-        message: `Available years for ${make} ${model}`,
-        data: years,
+  const { make, model } = req.params;
+
+  const query = `
+    SELECT MIN(yearbegin) AS minYear, MAX(yearend) AS maxYear
+    FROM vehicledescriptions
+    WHERE make = ? AND model = ? AND yearbegin IS NOT NULL AND yearend IS NOT NULL
+  `;
+
+  db.query(query, [make, model], (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+
+    const row = results[0];
+    const minYear = row.minYear;
+    const maxYear = row.maxYear;
+
+    if (minYear == null || maxYear == null) {
+      return res.status(404).json({
+        status: false,
+        message: `No years found for ${make} ${model}`,
       });
+    }
+
+    const years = [];
+    for (let year = minYear; year <= maxYear; year++) {
+      years.push(year);
+    }
+
+    res.json({
+      status: true,
+      message: `Available years for ${make} ${model}`,
+      data: years,
     });
   });
+});
 
-  // 5. Get full vehicle details based on make, model, engine, and year
+// 5. Get full vehicle details based on make, model, engine, and year
 app.get('/vehicle/:make/:model/:engine/:year', (req, res) => {
-    const { make, model, engine, year } = req.params;
-  
-    const query = `
-      SELECT * FROM vehicledescriptions
-      WHERE make = ? AND model = ? AND engdesc = ? AND ? BETWEEN yearbegin AND yearend
-      LIMIT 1
-    `;
-  
-    db.query(query, [make, model, engine, year], (err, results) => {
-      if (err) return res.status(500).json({ error: err });
-  
-      if (results.length === 0) {
-        return res.status(404).json({
-          status: false,
-          message: `Vehicle not found for ${make} ${model} ${engine} in year ${year}`,
-        });
-      }
-  
-      res.json({
-        status: true,
-        message: `Vehicle details for ${make} ${model} ${engine} in year ${year}`,
-        data: results[0],
+  const { make, model, engine, year } = req.params;
+
+  const query = `
+    SELECT * FROM vehicledescriptions
+    WHERE make = ? AND model = ? AND engdesc = ? AND ? BETWEEN yearbegin AND yearend
+    LIMIT 1
+  `;
+
+  db.query(query, [make, model, engine, year], (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: `Vehicle not found for ${make} ${model} ${engine} in year ${year}`,
       });
+    }
+
+    res.json({
+      status: true,
+      message: `Vehicle details for ${make} ${model} ${engine} in year ${year}`,
+      data: results[0],
     });
   });
+});
 
-  // 6. Get vehicle details by VIN
+// 6. Get vehicle details by VIN
 app.get('/vehicle/vin/:vin', (req, res) => {
-    const { vin } = req.params;
-  
-    const query = `SELECT * FROM vehicledescriptions WHERE vin = ? LIMIT 1`;
-  
-    db.query(query, [vin], (err, results) => {
-      if (err) return res.status(500).json({ error: err });
-  
-      if (results.length === 0) {
-        return res.status(404).json({
-          status: false,
-          message: `Vehicle not found for VIN ${vin}`,
-        });
-      }
-  
-      res.json({
-        status: true,
-        message: `Vehicle details for VIN ${vin}`,
-        data: results[0],
+  const { vin } = req.params;
+
+  const query = `SELECT * FROM vehicledescriptions WHERE vin = ? LIMIT 1`;
+
+  db.query(query, [vin], (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: `Vehicle not found for VIN ${vin}`,
       });
+    }
+
+    res.json({
+      status: true,
+      message: `Vehicle details for VIN ${vin}`,
+      data: results[0],
     });
   });
+});
 
+// 7. Get hunter records by VIN
+app.get('/hunter/vin/:vin', (req, res) => {
+  const { vin } = req.params;
 
+  const query = `SELECT * FROM hunter WHERE vin = ?`;
 
-  app.get('/hunter/vin/:vin', (req, res) => {
-    const { vin } = req.params;
-  
-    const query = `SELECT * FROM hunter WHERE vin = ?`;
-  
-    db.query(query, [vin], (err, results) => {
-      if (err) return res.status(500).json({ error: err });
-  
-      if (results.length === 0) {
-        return res.status(404).json({
-          status: false,
-          message: `No record found in hunter for VIN ${vin}`,
-        });
-      }
-  
-      // Attach a random image to each item
-      const enrichedResults = results.map((item) => ({
-        ...item,
-        image: `https://loremflickr.com/640/480/car?random=${Math.floor(Math.random() * 10000)}`
-      }));
-  
-      res.json({
-        status: true,
-        message: `Hunter records for VIN ${vin}`,
-        data: enrichedResults,
+  db.query(query, [vin], (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: false,
+        message: `No record found in hunter for VIN ${vin}`,
       });
+    }
+
+    const enrichedResults = results.map((item) => ({
+      ...item,
+      image: `https://loremflickr.com/640/480/car?random=${Math.floor(Math.random() * 10000)}`
+    }));
+
+    res.json({
+      status: true,
+      message: `Hunter records for VIN ${vin}`,
+      data: enrichedResults,
     });
   });
-  
-  
-  
-  
+});
 
+// Start server
 app.listen(PORT, () => {
   console.log(`🚗 Vehicle API is running on http://localhost:${PORT}`);
 });
