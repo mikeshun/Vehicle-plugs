@@ -1,18 +1,30 @@
 const express = require('express');
 const mysql = require('mysql2');
+const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
+app.use(cors());
 // Setup MySQL connection
+// const db = mysql.createConnection({
+//   host: 'host.docker.internal',
+//   user: 'mike',
+//   password: 'password',
+//   database: 'db',
+//   port: 3307
+// });
+
 const db = mysql.createConnection({
-  host: 'host.docker.internal',
+  host: '52.16.69.88',
   user: 'mike',
   password: 'password',
   database: 'db',
-  port: 3307
+  port: 3306
 });
+ 
 
 // Connect to DB
+
 db.connect((err) => {
   if (err) throw err;
   console.log('✅ Connected to MySQL');
