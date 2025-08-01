@@ -1,10 +1,15 @@
 const express = require('express');
-// const cors = require('cors'); // ❌ Commented out to disable CORS
 const mysql = require('mysql2');
 const app = express();
 const PORT = 3000;
 
-// app.use(cors()); // ❌ Disabling CORS by commenting this line
+// Enable CORS for all routes and all origins
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 // MySQL connection
 const db = mysql.createConnection({
